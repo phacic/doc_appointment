@@ -1,0 +1,35 @@
+version: "3"
+
+networks:
+  backend:
+    driver: "bridge"
+
+services:
+  db:
+    env_file:
+      - ./.env
+    image: postgres:14
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./pgdata/db:/var/lib/postgresql/data:rw
+#    environment:
+    networks:
+      - backend
+
+  web:
+    env_file:
+      - ./.env
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    command: sh -c 'python manage.py runserver 0.0.0.0:8000'
+#    environment: *db-variables
+    volumes:
+      - .:/code
+    ports:
+      - "8020:8000"
+    networks:
+      - backend
+    depends_on:
+      - db
