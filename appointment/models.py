@@ -48,16 +48,16 @@ class Appointment(BaseModel):
         return f"{self.patient} - {self.availability}"
 
 
-class Wishlist(BaseModel):
+class Waitlist(BaseModel):
     """
     represent patient wishlist. for appointment where doctor is already booked
     """
 
     doctor = models.ForeignKey(
-        Doctor, on_delete=models.CASCADE, related_name="wishlists"
+        Doctor, on_delete=models.CASCADE, related_name="waitlist"
     )
     patient = models.ForeignKey(
-        Patient, on_delete=models.CASCADE, related_name="wishlists"
+        Patient, on_delete=models.CASCADE, related_name="waitlist"
     )
 
     def __str__(self):
