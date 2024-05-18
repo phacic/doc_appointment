@@ -16,7 +16,7 @@ class TimeSlotFactory(DjangoModelFactory):
 class AvailabilityFactory(DjangoModelFactory):
     doctor = factory.SubFactory(DoctorFactory)
     slot = factory.SubFactory(TimeSlotFactory)
-    date = factory.Faker("date")
+    date = factory.Faker("future_date")
 
     class Meta:
         model = Availability
@@ -25,7 +25,6 @@ class AvailabilityFactory(DjangoModelFactory):
 class AppointmentFactory(DjangoModelFactory):
     patient = factory.SubFactory(PatientFactory)
     availability = factory.SubFactory(AvailabilityFactory)
-    is_confirmed = factory.Faker("boolean")
 
     class Meta:
         model = Appointment

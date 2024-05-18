@@ -42,10 +42,15 @@ class Appointment(BaseModel):
     availability = models.ForeignKey(
         Availability, on_delete=models.CASCADE, related_name="appointments"
     )
-    is_confirmed = models.BooleanField(default=False)
+    is_confirmed = models.BooleanField(default=True)
+    is_cancelled = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.patient} - {self.availability}"
+
+    def cancel(self):
+        self.is_cancelled = True
+        self.save()
 
 
 class Waitlist(BaseModel):

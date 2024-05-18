@@ -6,8 +6,10 @@ from appointment import views
 router = routers.DefaultRouter()
 app_name = "appointment"
 
+router.register("availability", views.AvailabilityView, basename="availability")
+router.register("", views.AppointmentView, basename="book")
+
 urlpatterns = [
     path("time_slots/", views.TimeSlotView.as_view(), name="time_slots"),
-    path("availability/", views.AvailabilityView.as_view(), name="availability"),
     path("", include(router.urls)),
 ]

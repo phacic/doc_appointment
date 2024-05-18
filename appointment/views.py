@@ -1,10 +1,19 @@
-from rest_framework.generics import ListAPIView, ListCreateAPIView
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
+from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
-from appointment.models import Availability, TimeSlot
-from appointment.serializers import AvailabilitySerializer, TimeSlotSerializer
-from authentication.permissions import IsDoctor
-from authentication.utils import is_doctor
+from appointment.models import Appointment, Availability, TimeSlot
+from appointment.serializers import (
+    AppointmentSerializer,
+    AvailabilitySerializer,
+    TimeSlotSerializer,
+)
+from authentication.permissions import IsDoctor, IsPatient
+from authentication.utils import is_doctor, is_patient
 
 
 class TimeSlotView(ListAPIView):
@@ -12,9 +21,10 @@ class TimeSlotView(ListAPIView):
     serializer_class = TimeSlotSerializer
 
 
-class AvailabilityView(ListCreateAPIView):
+class AvailabilityView(ListModelMixin, CreateModelMixin, GenericViewSet):
     serializer_class = AvailabilitySerializer
     permission_classes = (IsAuthenticated,)
+    filterset_fields = ["doctor", "slot"]
 
     def get_queryset(self):
         """
@@ -27,9 +37,62 @@ class AvailabilityView(ListCreateAPIView):
             )
         return Availability.objects.filter(is_active=True).order_by("slot").all()
 
-    def create(self, request, *args, **kwargs):
+    def get_permissions(self):
         """
-        restrict create to only doctors
+        restrict create to doctors
         """
-        self.permission_classes = (IsDoctor,)
-        return super().create(request, *args, **kwargs)
+        if self.action in ["create"]:
+            self.permission_classes = [IsDoctor]
+        return super().get_permissions()
+
+
+class AppointmentView(ListModelMixin, CreateModelMixin, GenericViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AppointmentSerializer
+    filterset_fields = ["is_confirmed", "is_cancelled"]
+    search_fields = [
+        "availability__doctor__user__first_name",
+        "availability__doctor__user__last_name",
+        "patient__user__first_name",
+        "patient__user__last_name",
+    ]
+
+    def get_queryset(self):
+        # return for doc
+        if is_doctor(self.request.user):
+            return (
+                Appointment.objects.filter(
+                    is_active=True, availability__doctor__user=self.request.user
+                )
+                .order_by("availability__slot")
+                .all()
+            )
+
+        if is_patient(self.request.user):
+            return (
+                Appointment.objects.filter(
+                    is_active=True, patient__user=self.request.user
+                )
+                .order_by("availability__slot")
+                .all()
+            )
+
+        return (
+            Appointment.objects.filter(is_active=True)
+            .order_by("availability__slot")
+            .all()
+        )
+
+    def get_permissions(self):
+        """
+        restrict create to patient
+        """
+        if self.action in ["create", "cancel"]:
+            self.permission_classes = [IsPatient]
+        return super().get_permissions()
+
+    @action(detail=True, methods=["delete"])
+    def cancel(self, request, *args, **kwargs):
+        appointment = self.get_object()
+        appointment.cancel()
+        return Response(status=status.HTTP_204_NO_CONTENT)
