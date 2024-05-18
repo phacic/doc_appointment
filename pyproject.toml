@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
-#addopts ="--cov=. --cov-report=term-missing:skip-covered --verbose"
+# remove when debugging test with pycharm
+addopts ="--cov=. --cov-report=term-missing:skip-covered --verbose"
 # to find your tests
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 

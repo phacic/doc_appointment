@@ -22,6 +22,15 @@ docker-compose up
 The api docs should be available on `http://localhost:8020/api/docs`
 
 
+### Test
+
+To run tests
+
+```shell
+docker-compse run --rm web pytest
+```
+
+
 ### Linting
 
 Pre-commit hooks are used to clean-up the code. Install pre-commit hooks with
