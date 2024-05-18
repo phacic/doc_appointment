@@ -4,7 +4,7 @@ from factory import Factory
 from faker import Faker
 from rest_framework import status
 
-from appointment.models import Availability, TimeSlot
+from appointment.models import Availability, TimeSlot, Waitlist
 
 fake = Faker()
 
@@ -36,7 +36,7 @@ class TestAvailabilityView:
         url = reverse("appointment:availability-list")
 
         slot = TimeSlot.objects.first()
-        data = {"doctor": doctor.id, "slot": slot.id, "date": fake.future_date()}
+        data = {"slot": slot.id, "date": fake.future_date()}
         response = client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -114,7 +114,6 @@ class TestAppointmentView:
         client = api_client_auth(patient.user)
         url = reverse("appointment:book-list")
         data = {
-            "patient": patient.id,
             "availability": av.id,
         }
         response = client.post(url, data, format="json")
@@ -153,7 +152,6 @@ class TestAppointmentView:
         client = api_client_auth(patient.user)
         url = reverse("appointment:book-list")
         data = {
-            "patient": patient.id,
             "availability": av2.id,
         }
         response = client.post(url, data, format="json")
@@ -176,6 +174,34 @@ class TestAppointmentView:
         appointment.refresh_from_db()
         assert appointment.is_cancelled
 
+    def test_cancel_appointment_with_waitlist(
+        self,
+        api_client_auth,
+        create_patient,
+        create_doctor,
+        availability_factory: Factory,
+        appointment_factory: Factory,
+        waitlist_factory: Factory,
+    ) -> None:
+        patient = create_patient()
+        doctor = create_doctor()
+
+        # current patient appointment
+        availability = availability_factory.create(**{"doctor": doctor})
+        appointment = appointment_factory.create(
+            **{"patient": patient, "availability": availability}
+        )
+
+        # waitlist (different patient)
+        availability1 = availability_factory.create(**{"doctor": doctor})
+        _ = appointment_factory.create(**{"availability": availability1})
+        _ = waitlist_factory.create(**{"doctor": doctor})
+
+        client = api_client_auth(patient.user)
+        url = reverse("appointment:book-cancel", args=[appointment.id])
+        response = client.delete(url, format="json")
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
     def test_search_appointment(
         self,
         api_client_auth,
@@ -197,3 +223,27 @@ class TestAppointmentView:
         response_data = response.json()
         assert response.status_code == status.HTTP_200_OK
         assert response_data["count"] == 1
+
+
+@pytest.mark.django_db
+class TestWaitlistView:
+    def test_create_with_doctor(self, api_client_auth, create_doctor):
+        doctor = create_doctor()
+        client = api_client_auth(doctor.user)
+        url = reverse("appointment:waitlist-list")
+        response = client.post(url, data={}, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_create_with_patient(self, api_client_auth, create_patient, create_doctor):
+        patient = create_patient()
+        doctor = create_doctor()
+        client = api_client_auth(patient.user)
+        url = reverse("appointment:waitlist-list")
+        data = {
+            "doctor": doctor.id,
+        }
+        response = client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # check db
+        assert Waitlist.objects.filter(patient=patient).exists()

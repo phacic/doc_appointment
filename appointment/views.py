@@ -6,11 +6,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from appointment.models import Appointment, Availability, TimeSlot
+from appointment.models import Appointment, Availability, TimeSlot, Waitlist
 from appointment.serializers import (
     AppointmentSerializer,
     AvailabilitySerializer,
     TimeSlotSerializer,
+    WaitlistSerializer,
 )
 from authentication.permissions import IsDoctor, IsPatient
 from authentication.utils import is_doctor, is_patient
@@ -95,4 +96,35 @@ class AppointmentView(ListModelMixin, CreateModelMixin, GenericViewSet):
     def cancel(self, request, *args, **kwargs):
         appointment = self.get_object()
         appointment.cancel()
+
+        doctor = appointment.availability.doctor
+
+        # look for next in waitlist to fill cancelled availability
+        if (
+            next_wait := Waitlist.objects.filter(doctor=doctor)
+            .order_by("-created_at")
+            .first()
+        ):
+            availability = appointment.availability
+            # move to available slot
+            Appointment.objects.create(
+                patient=next_wait.patient, availability=availability
+            )
+            # remove from waitlist
+            next_wait.delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class WaitlistView(ListModelMixin, CreateModelMixin, GenericViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = WaitlistSerializer
+    filterset_fields = ["doctor", "patient"]
+
+    def get_permissions(self):
+        if self.action in ["create"]:
+            self.permission_classes = [IsPatient]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        return Waitlist.objects.filter(is_active=True).all()

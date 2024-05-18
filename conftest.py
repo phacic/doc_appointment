@@ -8,6 +8,7 @@ from appointment.tests.factories import (
     AppointmentFactory,
     AvailabilityFactory,
     TimeSlotFactory,
+    WaitlistFactory,
 )
 from appointment.utils import create_slots as cs
 from authentication.models import Doctor
@@ -22,6 +23,7 @@ register(PatientFactory)
 register(TimeSlotFactory)
 register(AvailabilityFactory)
 register(AppointmentFactory)
+register(WaitlistFactory)
 
 
 @pytest.fixture

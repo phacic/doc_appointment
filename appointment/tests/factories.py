@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from appointment.models import Appointment, Availability, TimeSlot
+from appointment.models import Appointment, Availability, TimeSlot, Waitlist
 from authentication.tests.factories import DoctorFactory, PatientFactory
 
 
@@ -28,3 +28,11 @@ class AppointmentFactory(DjangoModelFactory):
 
     class Meta:
         model = Appointment
+
+
+class WaitlistFactory(DjangoModelFactory):
+    doctor = factory.SubFactory(DoctorFactory)
+    patient = factory.SubFactory(PatientFactory)
+
+    class Meta:
+        model = Waitlist

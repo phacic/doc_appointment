@@ -26,6 +26,9 @@ class Patient(UserBase):
     dob = models.DateField()
     gender = models.CharField(max_length=10, choices=GenderChoice.model_choice())
 
+    def __str__(self):
+        return self.user
+
 
 class Doctor(UserBase):
     """
@@ -33,3 +36,6 @@ class Doctor(UserBase):
     """
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="doctor")
+
+    def __str__(self):
+        return self.user

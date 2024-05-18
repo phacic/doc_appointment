@@ -7,6 +7,7 @@ router = routers.DefaultRouter()
 app_name = "appointment"
 
 router.register("availability", views.AvailabilityView, basename="availability")
+router.register("waitlist", views.WaitlistView, basename="waitlist")
 router.register("", views.AppointmentView, basename="book")
 
 urlpatterns = [
